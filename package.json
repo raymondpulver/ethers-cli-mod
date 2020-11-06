@@ -1,0 +1,24 @@
+{
+  "name": "ethers-cli-mod",
+  "version": "0.1.0",
+  "description": "modded ethers.js CLI",
+  "scripts": {
+    "ethers-cli-mod": "cross-env node bin/ethers"
+  },
+  "bin": {
+    "ethers-cli-mod": "./bin/ethers.js"
+  },
+  "main": "lib/mod.js",
+  "repository": "https://gitlab.kool.house/ray/ethers",
+  "author": "Raymond Pulver IV",
+  "license": "MIT",
+  "private": false,
+  "dependencies": {
+    "@ethersproject/cli": "^5.0.5",
+    "axios": "^0.21.0",
+    "ethers": "^5.0.19"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.2"
+  }
+}
