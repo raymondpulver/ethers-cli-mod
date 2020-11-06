@@ -4,8 +4,10 @@
 const { BaseProvider } = require('@ethersproject/providers');
 const { formatUnits } = require('@ethersproject/units');
 const { Contract } = require('@ethersproject/contracts');
-const { registerPlugin, Plugin, start } = require('../lib/mod');
-const ethgasstation = require('../lib/ethgasstation');
+const { registerPlugin, Plugin, start, ArgParser } = require('../lib/mod');
+const gasnow = require('ethers-gasnow');
+const ethers = require('ethers');
+const { RedispatchSigner } = require('ethers-redispatch-signer');
 const fs = require('fs');
 const path = require('path');
 
@@ -17,8 +19,7 @@ class RuntimePlugin extends Plugin {
     };
   }
   static bootstrap(cli) {
-    const getGasPrice = ethgasstation.EGSJsonRpcProvider.prototype.getGasPrice;
-    BaseProvider.prototype.getGasPrice = getGasPrice;
+    BaseProvider.prototype.getGasPrice = gasnow.createGetGasPrice('rapid');
     const resolveName = BaseProvider.prototype.resolveName;
     let addressBook = {};
     if (fs.existsSync(path.join(process.cwd(), 'addresses.txt'))) {
@@ -31,9 +32,42 @@ class RuntimePlugin extends Plugin {
       if (addressBook[name]) return addressBook[name];
       return await resolveName.call(this, name);
     };
+    const plugin = new Plugin();
+    const argParser = new ArgParser([]);
+    argParser.consumeMultiOptions = () => {
+      return [{
+        name: 'account-rpc',
+        value: '0'
+      }];
+    };
+    const consumeOptions = argParser.consumeOptions;
+    argParser.consumeOptions = function (...args) {
+      if (args[0] === 'rpc') {
+        return [ 'http://localhost:8545' ];
+      }
+      return consumeOptions.apply(this, args);
+    };
+    plugin.prepareOptions(argParser);
+    const WrappedSigner = plugin.accounts[0].constructor;
+    const sendTransaction = WrappedSigner.prototype.sendTransaction;
+    const defineReadOnly = ethers.utils.defineReadOnly;
+    WrappedSigner.prototype.sendTransaction = async function (...args) {
+      return await this._redispatch.sendTranscation(...args);
+    };
+    ethers.utils.defineReadOnly = function (...args) {
+      const [ instance ] = args;
+      if (instance instanceof WrappedSigner) {
+        instance._redispatch = this._redispatch || new RedispatchSigner(Object.assign(Object.create(instance), {
+          sendTransaction(...args) {
+            return sendTransaction.apply(this, args);
+          }
+        }));
+      }
+      defineReadOnly.apply(this, args);
+    };
   } 
   run() {
-    cosnole.log('you can\'t run this plugin, it already has injected the runtime');
+    console.log('you can\'t run this plugin, it already has injected the runtime');
   }
 }
 

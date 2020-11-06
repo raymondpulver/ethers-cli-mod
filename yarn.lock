@@ -44,7 +44,7 @@
     "@ethersproject/transactions" "^5.0.5"
     "@ethersproject/web" "^5.0.6"
 
-"@ethersproject/abstract-signer@5.0.7", "@ethersproject/abstract-signer@^5.0.4", "@ethersproject/abstract-signer@^5.0.6":
+"@ethersproject/abstract-signer@5.0.7", "@ethersproject/abstract-signer@^5.0.4", "@ethersproject/abstract-signer@^5.0.6", "@ethersproject/abstract-signer@^5.0.7":
   version "5.0.7"
   resolved "https://verdaccio.framework.xyz/@ethersproject%2fabstract-signer/-/abstract-signer-5.0.7.tgz#cdbd3bd479edf77c71b7f6a6156b0275b1176ded"
   integrity sha512-8W8gy/QutEL60EoMEpvxZ8MFAEWs/JvH5nmZ6xeLXoZvmBCasGmxqHdYjo2cxg0nevkPkq9SeenSsBBZSCx+SQ==
@@ -120,7 +120,7 @@
     solc "0.7.1"
     solidity-parser-antlr "^0.3.2"
 
-"@ethersproject/constants@5.0.5", "@ethersproject/constants@^5.0.4":
+"@ethersproject/constants@5.0.5", "@ethersproject/constants@^5.0.4", "@ethersproject/constants@^5.0.5":
   version "5.0.5"
   resolved "https://verdaccio.framework.xyz/@ethersproject%2fconstants/-/constants-5.0.5.tgz#0ed19b002e8404bdf6d135234dc86a7d9bcf9b71"
   integrity sha512-foaQVmxp2+ik9FrLUCtVrLZCj4M3Ibgkqvh+Xw/vFRSerkjVSYePApaVE5essxhoSlF1U9oXfWY09QI2AXtgKA==
@@ -459,10 +459,32 @@ elliptic@6.5.3:
     minimalistic-assert "^1.0.0"
     minimalistic-crypto-utils "^1.0.0"
 
+err-code@^2.0.2:
+  version "2.0.3"
+  resolved "https://verdaccio.framework.xyz/err-code/-/err-code-2.0.3.tgz#23c2f3b756ffdfc608d30e27c9a941024807e7f9"
+  integrity sha512-2bmlRpNKBxT/CRmPOlyISQpNj+qSeYvcym/uT0Jx2bMOlKLtSy1ZmLuVxSEKKyor/N5yhvp/ZiG1oE3DEYMSFA==
+
 esutils@^2.0.2:
   version "2.0.3"
   resolved "https://verdaccio.framework.xyz/esutils/-/esutils-2.0.3.tgz#74d2eb4de0b8da1293711910d50775b9b710ef64"
   integrity sha512-kVscqXk4OCp68SZ0dkgEKVi6/8ij300KBWTJq32P/dYeWTSwK41WyTxalN1eRmA5Z9UU/LX9D7FWSmV9SAYx6g==
+
+"ethers-gasnow@ssh://git@gitlab.kool.house/ray/ethers-gasnow":
+  version "0.1.0"
+  resolved "ssh://git@gitlab.kool.house/ray/ethers-gasnow#811d942634715112937fa995611549091633845b"
+  dependencies:
+    "@ethersproject/bignumber" "^5.0.8"
+    axios "^0.21.0"
+
+"ethers-redispatch-signer@ssh://git@gitlab.kool.house/ray/ethers-redispatch-signer":
+  version "0.1.0"
+  resolved "ssh://git@gitlab.kool.house/ray/ethers-redispatch-signer#d41614d553cd9d0b20b4ef037f104f6aaf04d679"
+  dependencies:
+    "@ethersproject/abstract-signer" "^5.0.7"
+    "@ethersproject/bignumber" "^5.0.8"
+    "@ethersproject/constants" "^5.0.5"
+    events "^3.2.0"
+    promise-retry "^2.0.1"
 
 ethers@^5.0.13, ethers@^5.0.19:
   version "5.0.19"
@@ -499,6 +521,11 @@ ethers@^5.0.13, ethers@^5.0.19:
     "@ethersproject/wallet" "5.0.7"
     "@ethersproject/web" "5.0.9"
     "@ethersproject/wordlists" "5.0.5"
+
+events@^3.2.0:
+  version "3.2.0"
+  resolved "https://verdaccio.framework.xyz/events/-/events-3.2.0.tgz#93b87c18f8efcd4202a461aec4dfc0556b639379"
+  integrity sha512-/46HWwbfCX2xTawVfkKLGxMifJYQBWMwY1mjywRtb4c9x8l5NP3KoJtnIOiL1hfdRkIuYhETxQlo62IF8tcnlg==
 
 follow-redirects@^1.10.0, follow-redirects@^1.12.1:
   version "1.13.0"
@@ -666,10 +693,23 @@ path-key@^3.1.0:
   resolved "https://verdaccio.framework.xyz/path-key/-/path-key-3.1.1.tgz#581f6ade658cbba65a0d3380de7753295054f375"
   integrity sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q==
 
+promise-retry@^2.0.1:
+  version "2.0.1"
+  resolved "https://verdaccio.framework.xyz/promise-retry/-/promise-retry-2.0.1.tgz#ff747a13620ab57ba688f5fc67855410c370da22"
+  integrity sha512-y+WKFlBR8BGXnsNlIHFGPZmyDf3DFMoLhaflAnyZgV6rG6xu+JwesTo2Q9R6XwYmtmwAFCkAk3e35jEdoeh/3g==
+  dependencies:
+    err-code "^2.0.2"
+    retry "^0.12.0"
+
 require-from-string@^2.0.0:
   version "2.0.2"
   resolved "https://verdaccio.framework.xyz/require-from-string/-/require-from-string-2.0.2.tgz#89a7fdd938261267318eafe14f9c32e598c36909"
   integrity sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==
+
+retry@^0.12.0:
+  version "0.12.0"
+  resolved "https://verdaccio.framework.xyz/retry/-/retry-0.12.0.tgz#1b42a6266a21f07421d1b0b54b7dc167b01c013b"
+  integrity sha1-G0KmJmoh8HQh0bC1S33BZ7AcATs=
 
 rimraf@^2.2.8:
   version "2.7.1"
