@@ -4,6 +4,7 @@
 const { BaseProvider } = require('@ethersproject/providers');
 const { formatUnits } = require('@ethersproject/units');
 const { Contract } = require('@ethersproject/contracts');
+const { Signer } = require('@ethersproject/abstract-signer');
 const { registerPlugin, Plugin, start, ArgParser } = require('../lib/mod');
 const gasnow = require('ethers-gasnow');
 const ethers = require('ethers');
@@ -18,7 +19,7 @@ class RuntimePlugin extends Plugin {
       help: 'Runtime has been injected! Thanks.'
     };
   }
-  static bootstrap(cli) {
+  static async bootstrap(cli) {
     BaseProvider.prototype.getGasPrice = gasnow.createGetGasPrice('rapid');
     const resolveName = BaseProvider.prototype.resolveName;
     let addressBook = {};
@@ -32,38 +33,23 @@ class RuntimePlugin extends Plugin {
       if (addressBook[name]) return addressBook[name];
       return await resolveName.call(this, name);
     };
-    const plugin = new Plugin();
-    const argParser = new ArgParser([]);
-    argParser.consumeMultiOptions = () => {
-      return [{
-        name: 'account-rpc',
-        value: '0'
-      }];
-    };
-    const consumeOptions = argParser.consumeOptions;
-    argParser.consumeOptions = function (...args) {
-      if (args[0] === 'rpc') {
-        return [ 'http://localhost:8545' ];
+    Signer.prototype._sendTransaction = Signer.prototype.sendTransaction;
+    Signer.prototype.sendTransaction = async function (...args) {
+      const [ tx ] = args;
+      delete tx.from;
+      if (this.persistence) {
+        return await this._sendTransaction(...args);
       }
-      return consumeOptions.apply(this, args);
-    };
-    plugin.prepareOptions(argParser);
-    const WrappedSigner = plugin.accounts[0].constructor;
-    const sendTransaction = WrappedSigner.prototype.sendTransaction;
-    const defineReadOnly = ethers.utils.defineReadOnly;
-    WrappedSigner.prototype.sendTransaction = async function (...args) {
-      return await this._redispatch.sendTranscation(...args);
-    };
-    ethers.utils.defineReadOnly = function (...args) {
-      const [ instance ] = args;
-      if (instance instanceof WrappedSigner) {
-        instance._redispatch = this._redispatch || new RedispatchSigner(Object.assign(Object.create(instance), {
-          sendTransaction(...args) {
-            return sendTransaction.apply(this, args);
+      if (!this._redispatch) {
+        this._redispatch = new RedispatchSigner(new Proxy(this, {
+          get: (o, prop) => {
+            if (prop === 'persistence') return {};
+            return o[prop];
           }
         }));
+        this._redispatch.startWatching();
       }
-      defineReadOnly.apply(this, args);
+      return await this._redispatch.sendTransaction(...args);
     };
   } 
   run() {
@@ -75,6 +61,23 @@ const Erc20Abi = [
   'function balanceOf(address) view returns (uint256)',
   'function decimals() view returns (uint8)'
 ];
+
+class EtherBalanceOfPlugin extends Plugin {
+  static getHelp() {
+    return {
+      name: 'balance-of',
+      help: 'Get the ether balance in an address'
+    };
+  }
+  async prepareArgs(args) {
+    const [ user ] = args;
+    this.user = user;
+  }
+  async run() {
+    console.log(ethers.utils.formatEther(await this.provider.getBalance(this.user || await this.accounts[0].getAddress())));
+    process.exit(0);
+  }
+}
 
 class BalanceOfPlugin extends Plugin {
   static getHelp() {
@@ -98,5 +101,6 @@ class BalanceOfPlugin extends Plugin {
 
 registerPlugin('runtime-plugin', RuntimePlugin);
 registerPlugin('balance-of-token', BalanceOfPlugin)
+registerPlugin('balance-of', EtherBalanceOfPlugin);
 
 start();

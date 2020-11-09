@@ -476,9 +476,8 @@ esutils@^2.0.2:
     "@ethersproject/bignumber" "^5.0.8"
     axios "^0.21.0"
 
-"ethers-redispatch-signer@ssh://git@gitlab.kool.house/ray/ethers-redispatch-signer":
+ethers-redispatch-signer@../ethers-redispatch-signer:
   version "0.1.0"
-  resolved "ssh://git@gitlab.kool.house/ray/ethers-redispatch-signer#d41614d553cd9d0b20b4ef037f104f6aaf04d679"
   dependencies:
     "@ethersproject/abstract-signer" "^5.0.7"
     "@ethersproject/bignumber" "^5.0.8"
