@@ -2,7 +2,7 @@
 'use strict';
 
 const { BaseProvider } = require('@ethersproject/providers');
-const { formatUnits } = require('@ethersproject/units');
+const { parseUnits, formatUnits } = require('@ethersproject/units');
 const { Contract } = require('@ethersproject/contracts');
 const { Signer } = require('@ethersproject/abstract-signer');
 const { registerPlugin, Plugin, start, ArgParser } = require('../lib/mod');
@@ -35,8 +35,8 @@ class RuntimePlugin extends Plugin {
     };
     Signer.prototype._sendTransaction = Signer.prototype.sendTransaction;
     Signer.prototype.sendTransaction = async function (...args) {
-      const [ tx ] = args;
-      delete tx.from;
+      const [ txObject ] = args;
+      delete txObject.from;
       if (this.persistence) {
         return await this._sendTransaction(...args);
       }
@@ -47,10 +47,31 @@ class RuntimePlugin extends Plugin {
             return o[prop];
           }
         }));
+/*
+        const { getGasPrice: getGasPriceOriginal } = BaseProvider.prototype;
+        BaseProvider.prototype.getGasPrice = async function () {
+          const result = await getGasPriceOriginal.apply(this, []);
+          return result;
+        };
+*/
+        this._redispatch.on('tx:dispatch', (tx) => {
+          console.log('Redispatch:')
+          console.log('  Gas Price: ' + formatUnits(tx.gasPrice, 9) + ' gwei');
+          console.log('  Hash: ' + tx.hash);
+        });
         this._redispatch.startWatching();
       }
-      return await this._redispatch.sendTransaction(...args);
+      const tx = await this._redispatch.sendTransaction(...args);
+      return tx;
     };
+    if (process.env.DEBUG_GASPRICE) {
+      const { getGasPrice } = BaseProvider.prototype;
+      BaseProvider.prototype.getGasPrice = async function () {
+        const result = (this._last || parseUnits('15', 9)).add(parseUnits('1', 9));
+        this._last = result;
+        return result;
+      };
+    }
   } 
   run() {
     console.log('you can\'t run this plugin, it already has injected the runtime');
