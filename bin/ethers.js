@@ -54,14 +54,19 @@ class RuntimePlugin extends Plugin {
           return result;
         };
 */
+     
+        this._seen = {};
         this._redispatch.on('tx:dispatch', (tx) => {
-          console.log('Redispatch:')
-          console.log('  Gas Price: ' + formatUnits(tx.gasPrice, 9) + ' gwei');
-          console.log('  Hash: ' + tx.hash);
+          if (this._seen[Number(tx.nonce)]) {
+            console.log('Redispatch:')
+            console.log('  Gas Price: ' + formatUnits(tx.gasPrice, 9) + ' gwei');
+            console.log('  Hash: ' + tx.hash);
+          }
         });
         this._redispatch.startWatching();
       }
       const tx = await this._redispatch.sendTransaction(...args);
+      this._seen[Number(tx.nonce)] = true;
       return tx;
     };
     if (process.env.DEBUG_GASPRICE) {
