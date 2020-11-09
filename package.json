@@ -1,6 +1,6 @@
 {
   "name": "ethers-cli-mod",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "modded ethers.js CLI",
   "scripts": {
     "ethers-cli-mod": "cross-env node bin/ethers"
@@ -18,7 +18,7 @@
     "axios": "^0.21.0",
     "ethers": "^5.0.19",
     "ethers-gasnow": "ssh://git@gitlab.kool.house/ray/ethers-gasnow",
-    "ethers-redispatch-signer": "../ethers-redispatch-signer"
+    "ethers-redispatch-signer": "ssh://git@gitlab.kool.house/ray/ethers-redispatch-signer"
   },
   "devDependencies": {
     "cross-env": "^7.0.2"
