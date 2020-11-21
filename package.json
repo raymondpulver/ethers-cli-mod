@@ -17,7 +17,6 @@
     "@ethersproject/cli": "^5.0.5",
     "axios": "^0.21.0",
     "ethers": "^5.0.19",
-    "ethers-gasnow": "../ethers-gasnow",
     "ethers-redispatch-signer": "^0.1.2"
   },
   "devDependencies": {
