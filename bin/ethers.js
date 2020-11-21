@@ -68,6 +68,10 @@ class ApprovePlugin extends TransferPlugin {
   }
 }
 
+const checkFlag = (flag) => {
+  return Boolean(process.argv.find((v) => v === flag));
+};
+
 class RuntimePlugin extends Plugin {
   static getHelp() {
     return {
@@ -87,20 +91,24 @@ class RuntimePlugin extends Plugin {
       if (addressBook[name]) return addressBook[name];
       return await resolveName.call(this, name);
     };
-    const { prepareOptions } = Plugin.prototype;
-    Plugin.prototype.prepareOptions = async function (...args) {
-      let hasOption = process.argv.findIndex((v) => v === '--rpc');
-      if (!~hasOption && process.env.ETHERS_RPC) ['--rpc', process.env.ETHERS_RPC ].forEach((v) => process.argv.push(v));
-      let hasAccountRpc = process.argv.findIndex((v) => v === '--account-rpc');
-      if (!~hasAccountRpc && process.env.ETHERS_ACCOUNT_RPC) [ '--account-rpc', process.env.ETHERS_ACCOUNT_RPC ].forEach((v) => process.argv.push(v));
-      let hasInfura = process.argv.findIndex((v) => v === '--infura');
-      if (!~hasInfura && process.env.ETHERS_INFURA) ['--infura'].forEach((v) => process.argv.push(v));
-      let hasAccount = process.argv.findIndex((v) => v === '--account');
-      if (!~hasAccount && process.env.ETHERS_ACCOUNT) ['--account', process.argv[hasAccount + 1]].forEach((v) => process.argv.push(v));
-      return prepareOptions.apply(this, args);
+    const { consumeMultiOptions } = ArgParser.prototype;
+    ArgParser.prototype.consumeMultiOptions = function (...args) {
+      this._insertEnvironment();
+      return consumeMultiOptions.apply(this, args);
     };
+    ArgParser.prototype._insertEnvironment = function () {
+      const additions = Object.keys(process.env).filter((v) => v.match(/^ETHERS\_/)).map((v) => ({
+        name: v,
+        value: process.env[v]
+      })).map((v) => ({
+          value: v.value,
+          name: v.name.split('_').slice(1).map((v) => v.toLowerCase()).join('-')
+      })).filter((v) => !this._args.find((u) => u.match(v.name)));
+      additions.forEach((v) => { this._args.push('--' + v.name); this._args.push((v.value)); });
+    }
+
     Signer.prototype._sendTransaction = Signer.prototype.sendTransaction;
-    Signer.prototype.sendTransaction = async function (...args) {
+    if (checkFlag('--redispatch')) Signer.prototype.sendTransaction = async function (...args) {
       const [ txObject ] = args;
       delete txObject.from;
       if (this.persistence) {
@@ -113,14 +121,7 @@ class RuntimePlugin extends Plugin {
             return o[prop];
           }
         }));
-/*
         const { getGasPrice: getGasPriceOriginal } = BaseProvider.prototype;
-        BaseProvider.prototype.getGasPrice = async function () {
-          const result = await getGasPriceOriginal.apply(this, []);
-          return result;
-        };
-*/
-     
         this._seen = {};
         this._redispatch.on('tx:dispatch', (tx) => {
           if (this._seen[Number(tx.nonce)]) {
