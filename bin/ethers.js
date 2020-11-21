@@ -12,6 +12,62 @@ const { RedispatchSigner } = require('ethers-redispatch-signer');
 const fs = require('fs');
 const path = require('path');
 
+class TransferPlugin extends Plugin {
+  static getHelp() {
+    return {
+      name: 'transfer',
+      help: 'ERC20 transfer a token'
+    };
+  }
+  async _getAmount() {
+    return ethers.utils.parseUnits(this.amount, await this.contract.decimals());
+  }
+  prepareArgs(args) {
+    const [ token, target, amount ] = args;
+    this.target = target;
+    this.amount = amount;
+    this.contract = new ethers.Contract(token, Erc20Abi, this.accounts[0]);
+  }
+  async run() {
+    await this.contract.transfer(this.target, await this._getAmount());
+  }
+}
+
+class MintPlugin extends TransferPlugin {
+  static getHelp() {
+    return {
+      name: 'mint',
+      help: 'mint a test token'
+    };
+  }
+  prepareArgs(args) {
+    const [ token, target, amount ] = args;
+    this.target = target;
+    this.amount = amount;
+    this.contract = new ethers.Contract(token, Erc20Abi, this.accounts[0]);
+  }
+  async run() {
+    await this.contract.mint(this.target, this._getAmount());
+  }
+}
+
+class ApprovePlugin extends TransferPlugin {
+  static getHelp() {
+    return {
+      name: 'approve',
+      help: 'ERC20 approve a token'
+    };
+  }
+  prepareArgs(args) {
+    const [ token, from, target, amount ] = args;
+    this.from = from;
+    this.contract = new ethers.Contract(token, Erc20Abi, this.accounts[0]);
+  }
+  async run() {
+    await this.contract.approve(this.from, this.target, await this._getAmount());
+  }
+}
+
 class RuntimePlugin extends Plugin {
   static getHelp() {
     return {
@@ -23,15 +79,25 @@ class RuntimePlugin extends Plugin {
     BaseProvider.prototype.getGasPrice = gasnow.createGetGasPrice('rapid');
     const resolveName = BaseProvider.prototype.resolveName;
     let addressBook = {};
-    if (fs.existsSync(path.join(process.cwd(), 'addresses.txt'))) {
-      addressBook = fs.readFileSync(path.join(process.cwd(), 'addresses.txt'), 'utf8').split('\n').filter(Boolean).map((v) => v.split(/\s+/g)).reduce((r, v) => {
-       r[v[0]] = v[1];
-       return r;
-      }, {});
+    const addressPath = path.join(process.env.HOME, '.address-book.json');
+    if (fs.existsSync(addressPath)) {
+      addressBook = require(addressPath);
     }
     BaseProvider.prototype.resolveName = async function (name) {
       if (addressBook[name]) return addressBook[name];
       return await resolveName.call(this, name);
+    };
+    const { prepareOptions } = Plugin.prototype;
+    Plugin.prototype.prepareOptions = async function (...args) {
+      let hasOption = process.argv.findIndex((v) => v === '--rpc');
+      if (!~hasOption && process.env.ETHERS_RPC) ['--rpc', process.env.ETHERS_RPC ].forEach((v) => process.argv.push(v));
+      let hasAccountRpc = process.argv.findIndex((v) => v === '--account-rpc');
+      if (!~hasAccountRpc && process.env.ETHERS_ACCOUNT_RPC) [ '--account-rpc', process.env.ETHERS_ACCOUNT_RPC ].forEach((v) => process.argv.push(v));
+      let hasInfura = process.argv.findIndex((v) => v === '--infura');
+      if (!~hasInfura && process.env.ETHERS_INFURA) ['--infura'].forEach((v) => process.argv.push(v));
+      let hasAccount = process.argv.findIndex((v) => v === '--account');
+      if (!~hasAccount && process.env.ETHERS_ACCOUNT) ['--account', process.argv[hasAccount + 1]].forEach((v) => process.argv.push(v));
+      return prepareOptions.apply(this, args);
     };
     Signer.prototype._sendTransaction = Signer.prototype.sendTransaction;
     Signer.prototype.sendTransaction = async function (...args) {
@@ -85,8 +151,44 @@ class RuntimePlugin extends Plugin {
 
 const Erc20Abi = [
   'function balanceOf(address) view returns (uint256)',
+  'function transfer(address, uint256) returns (bool)',
+  'function approve(address, address, uint256) returns (bool)',
+  'function mint(address, uint256)',
+  'function totalSupply() view returns (uint256)',
   'function decimals() view returns (uint8)'
 ];
+
+class DecimalsPlugin extends Plugin {
+  static getHelp() {
+    return {
+      name: 'decimals',
+      help: 'get decimal precision for token'
+    };
+  }
+  prepareArgs(args) {
+    this.contract = new ethers.Contract(args[0], Erc20Abi, this.provider);
+  }
+  async run() {
+    console.log(String(await this.contract.decimals()));
+  }
+}
+
+class TotalSupplyPlugin extends DecimalsPlugin {
+  static getHelp() {
+    return {
+      name: 'total-supply',
+      help: 'get total supply of token'
+    }
+  }
+  prepareArgs(args) {
+    this.contract = new ethers.Contract(args[0], Erc20Abi, this.provider);
+  }
+  async run() {
+    console.log(ethers.utils.formatUnits(await this.contract.totalSupply(), await this.contract.decimals()));
+  }
+}
+
+
 
 class EtherBalanceOfPlugin extends Plugin {
   static getHelp() {
@@ -102,6 +204,20 @@ class EtherBalanceOfPlugin extends Plugin {
   async run() {
     console.log(ethers.utils.formatEther(await this.provider.getBalance(this.user || await this.accounts[0].getAddress())));
     process.exit(0);
+  }
+}
+
+class ExportKeyPlugin extends Plugin {
+  static getHelp() {
+    return {
+      name: 'export',
+      help: 'Exports a private key'
+    };
+  }
+  async run() {
+    await this.accounts[0].unlock();
+      console.log(this.accounts[0]);
+    console.log('0x' + this.accounts[0]._privKey.toString(16));
   }
 }
 
@@ -128,5 +244,11 @@ class BalanceOfPlugin extends Plugin {
 registerPlugin('runtime-plugin', RuntimePlugin);
 registerPlugin('balance-of-token', BalanceOfPlugin)
 registerPlugin('balance-of', EtherBalanceOfPlugin);
+registerPlugin('export-key', ExportKeyPlugin);
+registerPlugin('transfer', TransferPlugin);
+registerPlugin('mint', MintPlugin);
+registerPlugin('approve', ApprovePlugin);
+registerPlugin('total-supply', TotalSupplyPlugin);
+registerPlugin('decimals', DecimalsPlugin);
 
 start();
