@@ -6,6 +6,7 @@ const { parseUnits, formatUnits } = require('@ethersproject/units');
 const { Contract } = require('@ethersproject/contracts');
 const { Signer } = require('@ethersproject/abstract-signer');
 const { registerPlugin, Plugin, start, ArgParser } = require('../lib/mod');
+const streamToBuffer = require('stream-to-buffer');
 const gasnow = require('ethers-gasnow');
 const ethers = require('ethers');
 const { RedispatchSigner } = require('ethers-redispatch-signer');
@@ -150,6 +151,42 @@ class RuntimePlugin extends Plugin {
   }
 }
 
+const swapStreams = () => {
+  const stdout = Object.getOwnPropertyDescriptor(process, 'stdout');
+  const stderr = Object.getOwnPropertyDescriptor(process, 'stderr');
+  Object.defineProperty(process, 'stdout', stderr);
+  Object.defineProperty(process, 'stderr', stdout);
+};
+swapStreams();
+
+class ExportPlugin extends Plugin {
+  static getHelp() {
+    return {
+      name: 'export',
+      help: 'export a key'
+    };
+  }
+  async prepareArgs(args) {
+    args.push('--yes');
+    return super.prepareArgs(args);
+  }
+  async run() {
+    const signer = this.accounts[0];
+    signer.provider.getNetwork = async () => ({});
+    signer.populateTransaction = async () => ({});
+    signer.plugin.yes = true;
+    const log = console.log;
+    console.log = () => {};
+    Signer.prototype.sendTransaction = async function () {
+      console.log = log;
+      swapStreams();
+      console.log(this._signingKey().privateKey);
+      process.exit(0);
+    };
+    await this.accounts[0].sendTransaction({});
+  }
+}
+
 const Erc20Abi = [
   'function balanceOf(address) view returns (uint256)',
   'function transfer(address, uint256) returns (bool)',
@@ -208,20 +245,6 @@ class EtherBalanceOfPlugin extends Plugin {
   }
 }
 
-class ExportKeyPlugin extends Plugin {
-  static getHelp() {
-    return {
-      name: 'export',
-      help: 'Exports a private key'
-    };
-  }
-  async run() {
-    await this.accounts[0].unlock();
-      console.log(this.accounts[0]);
-    console.log('0x' + this.accounts[0]._privKey.toString(16));
-  }
-}
-
 class BalanceOfPlugin extends Plugin {
   static getHelp() {
     return {
@@ -245,11 +268,11 @@ class BalanceOfPlugin extends Plugin {
 registerPlugin('runtime-plugin', RuntimePlugin);
 registerPlugin('balance-of-token', BalanceOfPlugin)
 registerPlugin('balance-of', EtherBalanceOfPlugin);
-registerPlugin('export-key', ExportKeyPlugin);
 registerPlugin('transfer', TransferPlugin);
 registerPlugin('mint', MintPlugin);
 registerPlugin('approve', ApprovePlugin);
 registerPlugin('total-supply', TotalSupplyPlugin);
 registerPlugin('decimals', DecimalsPlugin);
+registerPlugin('export', ExportPlugin);
 
 start();
